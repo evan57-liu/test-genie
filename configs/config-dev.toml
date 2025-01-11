@@ -1,0 +1,19 @@
+[project]
+app_host = "0.0.0.0"
+port = 8001
+run_scheduler = false
+
+[db]
+should_create_tables = true
+
+[log]
+level = "DEBUG"
+
+[api]
+ignore_auth_paths = [
+    "/api/v1/auth",
+    "/docs",
+    "/openapi.json",
+    "/api/v1/transaction-scans",
+    "/api/v1/test/ping"
+]
