@@ -162,4 +162,4 @@ cython_debug/
 configs/local_settings.py
 configs/local_settings-prod.py
 .idea/
-.files/
+files/

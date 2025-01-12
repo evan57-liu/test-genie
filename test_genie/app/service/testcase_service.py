@@ -1,3 +1,5 @@
+import threading
+
 from fastapi import Request
 from markitdown import MarkItDown
 
@@ -5,7 +7,7 @@ from test_genie.core.exceptions import BadRequestException
 from test_genie.app.models import File, TestCase
 from test_genie.app.enums import TestCaseStatus
 from test_genie.app.dto.testcase_dto import GenerateTestCaseRequest, GenerateTestCaseResponse, TestCaseDto
-from test_genie.app.prompt import prompt
+from test_genie.app.prompt import prompt, prompt_split, prompt_merge
 
 
 class TestCaseService:
@@ -13,9 +15,9 @@ class TestCaseService:
         self.session_factory = session_factory
         self.openai_client = openai_client
 
-    async def get_test_case(self, req: Request, test_case_id: int) -> TestCaseDto:
+    async def get_test_case(self, req: Request, file_id: int) -> TestCaseDto:
         with self.session_factory() as session:
-            test_case = session.query(TestCase).filter(TestCase.id == test_case_id).scalar()
+            test_case = session.query(TestCase).filter(TestCase.file_id == file_id).scalar()
             if not test_case:
                 raise BadRequestException("test case not found")
 
@@ -34,34 +36,55 @@ class TestCaseService:
             if not file:
                 raise BadRequestException("file not found")
 
-        if file.name.endswith(".md"):
-            content = read_md_file(file.path)
-        else:
-            content = read_other_file(file.path)
+            test_case_db = session.query(TestCase).filter(TestCase.file_id == body.file_id).scalar()
+            if test_case_db:
+                return GenerateTestCaseResponse(test_case_id=test_case_db.id)
 
-        try:
-            test_case_result = self._generate_test_case(body.prompt, content)
-        except Exception as e:
-            with self.session_factory() as session:
-                test_case = TestCase(file_id=body.file_id, status=TestCaseStatus.FAILED)
-                session.add(test_case)
-            raise e
-
-        with self.session_factory() as session:
-            test_case = TestCase(file_id=body.file_id, status=TestCaseStatus.SUCCESS, result=test_case_result)
+            test_case = TestCase(
+                file_id=body.file_id,
+                status=TestCaseStatus.PENDING,
+                result=None
+            )
             session.add(test_case)
+            session.commit()
 
-        # with self.session_factory() as session:
-        #     test_case.result = test_case_result
-        #     test_case.status = TestCaseStatus.SUCCESS
-        #     session.commit()
+        threading.Thread(
+            target=self.generate_test_case_task,
+            args=(file.id, file.path, file.name),
+            daemon=True
+        ).start()
 
         return GenerateTestCaseResponse(test_case_id=test_case.id)
 
-    def _generate_test_case(self, p: str, content: str) -> str:
-        if not p or p.strip() == "":
-            p = prompt
+    def generate_test_case_task(self, file_id, file_path, file_name):
+        try:
+            if file_name.endswith(".md"):
+                content = read_md_file(file_path)
+            else:
+                content = read_other_file(file_path)
 
+            input_text = self._generate(prompt_split, content)
+            modules = input_text.strip().split('---module---')
+            modules = [module.strip() for module in modules if module.strip()]
+            test_case_result = ""
+            for module in modules:
+                test_case_result += self._generate(prompt, module)
+            # result = self._generate(prompt_merge, test_case_result)
+            with self.session_factory() as session:
+                test_case = session.query(TestCase).filter_by(file_id=file_id).first()
+                if test_case:
+                    test_case.result = test_case_result
+                    test_case.status = TestCaseStatus.SUCCESS
+                    session.commit()
+        except Exception as e:
+            with self.session_factory() as session:
+                test_case = session.query(TestCase).filter_by(file_id=file_id).first()
+                if test_case:
+                    test_case.status = TestCaseStatus.FAILED
+                    test_case.result = str(e)
+                    session.commit()
+
+    def _generate(self, p: str, content: str) -> str:
         completion = self.openai_client.chat.completions.create(
             model="chatgpt-4o-latest",
             max_tokens=16384,

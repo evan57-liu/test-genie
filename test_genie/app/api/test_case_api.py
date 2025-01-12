@@ -21,9 +21,9 @@ async def generate_test_case(req: Request, body: GenerateTestCaseRequest,
 
 
 @testcase_router.get(
-    "/{test_case_id}",
+    "/file/{file_id}",
     response_model=TestCaseDto,
     summary="get test case",
 )
-async def get_test_case(req: Request, test_case_id: int, testcase_service=Depends(get_testcase_service)):
-    return await testcase_service.get_test_case(req, test_case_id)
+async def get_test_case(req: Request, file_id: int, testcase_service=Depends(get_testcase_service)):
+    return await testcase_service.get_test_case(req, file_id)
