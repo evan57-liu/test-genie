@@ -8,6 +8,7 @@ from test_genie.app.models import File, TestCase
 from test_genie.app.enums import TestCaseStatus
 from test_genie.app.dto.testcase_dto import GenerateTestCaseRequest, GenerateTestCaseResponse, TestCaseDto
 from test_genie.app.prompt import prompt, prompt_split, prompt_merge
+from test_genie.app.prompt_en import prompt_en
 
 
 class TestCaseService:
@@ -68,7 +69,7 @@ class TestCaseService:
             modules = [module.strip() for module in modules if module.strip()]
             test_case_result = ""
             for module in modules:
-                test_case_result += self._generate(prompt, module)
+                test_case_result += self._generate(prompt_en, module)
             # result = self._generate(prompt_merge, test_case_result)
             with self.session_factory() as session:
                 test_case = session.query(TestCase).filter_by(file_id=file_id).first()
