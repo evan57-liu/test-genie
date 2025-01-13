@@ -44,3 +44,14 @@ class FileService:
             session.add(f)
 
         return UploadFileResponse(file_id=f.id, file_name=f.name)
+
+    async def delete_file(self, req: Request, file_id: int):
+        with self.session_factory() as session:
+            file = session.query(File).filter(File.id == file_id).scalar()
+            if not file:
+                raise NotFoundException("file not found")
+
+            session.delete(file)
+            os.remove(file.path)
+
+        return

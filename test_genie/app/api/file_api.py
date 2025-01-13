@@ -13,6 +13,16 @@ def get_file_service():
     return Container.file_service
 
 
+@file_router.delete(
+    "/{file_id}",
+    response_model=CommonResponse,
+    summary="delete file",
+)
+async def delete_file(req: Request, file_id: int, file_service=Depends(get_file_service)):
+    await file_service.delete_file(req, file_id)
+    return success_response()
+
+
 @file_router.get(
     "/{user_id}",
     response_model=GetFilesResponse,

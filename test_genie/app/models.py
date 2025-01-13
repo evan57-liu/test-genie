@@ -1,6 +1,6 @@
 from dataclasses import dataclass
 
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy import Integer, String, Enum, ForeignKey, Text
 from sqlalchemy.orm import declarative_base
 
@@ -47,3 +47,5 @@ class TestCase(Base, TimestampMixin):
     result: Mapped[str] = mapped_column(Text, nullable=True)
     status: Mapped[TestCaseStatus] = mapped_column(Enum(TestCaseStatus), nullable=False)
     file_id: Mapped[int] = mapped_column(Integer, ForeignKey("file.id"), nullable=False)
+
+    file: Mapped["File"] = relationship("File", lazy=False)

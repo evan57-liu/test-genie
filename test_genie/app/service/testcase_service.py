@@ -1,3 +1,4 @@
+import os
 import threading
 
 from fastapi import Request
@@ -6,7 +7,9 @@ from markitdown import MarkItDown
 from test_genie.core.exceptions import BadRequestException
 from test_genie.app.models import File, TestCase
 from test_genie.app.enums import TestCaseStatus
-from test_genie.app.dto.testcase_dto import GenerateTestCaseRequest, GenerateTestCaseResponse, TestCaseDto
+from test_genie.app.dto.file_dto import FileDto
+from test_genie.app.dto.testcase_dto import GenerateTestCaseRequest, GenerateTestCaseResponse, TestCaseDto, \
+    GetTestCasesResponse
 from test_genie.app.prompt import prompt, prompt_split, prompt_merge
 from test_genie.app.prompt_en import prompt_en_v1
 
@@ -15,6 +18,29 @@ class TestCaseService:
     def __init__(self, session_factory, openai_client):
         self.session_factory = session_factory
         self.openai_client = openai_client
+
+    async def get_test_cases(self, req: Request, user_id: int) -> GetTestCasesResponse:
+        with self.session_factory() as session:
+            test_cases = session.query(TestCase).join(File).filter(File.user_id == user_id).all()
+
+        test_cases_dto = []
+        for test_case in test_cases:
+            test_cases_dto.append(TestCaseDto(
+                id=test_case.id,
+                result=test_case.result,
+                status=test_case.status,
+                file_id=test_case.file_id,
+                created_at=test_case.created_at,
+                updated_at=test_case.updated_at,
+                file=FileDto(
+                    id=test_case.file.id,
+                    name=test_case.file.name,
+                    user_id=test_case.file.user_id,
+                    created_at=test_case.file.created_at,
+                    updated_at=test_case.file.updated_at,
+                )))
+
+        return GetTestCasesResponse(test_cases=test_cases_dto)
 
     async def get_test_case(self, req: Request, file_id: int) -> TestCaseDto:
         with self.session_factory() as session:
@@ -100,6 +126,21 @@ class TestCaseService:
         )
 
         return completion.choices[0].message.content
+
+    async def delete_test_case(self, req: Request, test_case_id: int):
+        with self.session_factory() as session:
+            test_case = session.query(TestCase).filter(TestCase.id == test_case_id).scalar()
+            if not test_case:
+                raise BadRequestException("test case not found")
+            file = session.query(File).filter(File.id == test_case.file_id).scalar()
+            if not file:
+                raise BadRequestException("file not found")
+
+            session.delete(file)
+            session.delete(test_case)
+            os.remove(file.path)
+
+        return
 
 
 def read_md_file(file_path: str) -> str:

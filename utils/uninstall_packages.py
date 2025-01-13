@@ -1,11 +1,13 @@
 import subprocess
 
+
 def get_installed_packages():
     """
     Get a list of currently installed packages using pip freeze.
     """
     result = subprocess.run(['pip', 'freeze'], capture_output=True, text=True)
     return set(result.stdout.splitlines())
+
 
 def get_required_packages(file_path):
     """
@@ -14,12 +16,14 @@ def get_required_packages(file_path):
     with open(file_path, 'r') as file:
         return {line.strip() for line in file}
 
+
 def uninstall_packages(packages):
     """
     Uninstall the given packages using pip.
     """
     for package in packages:
         subprocess.run(['pip', 'uninstall', '-y', package])
+
 
 if __name__ == '__main__':
     # Get the list of installed packages
