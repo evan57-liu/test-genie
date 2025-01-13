@@ -95,7 +95,7 @@ class TestCaseService:
             modules = [module.strip() for module in modules if module.strip()]
             test_case_result = ""
             for module in modules:
-                test_case_result += self._generate(prompt_en_v1, module)
+                test_case_result += self._generate(prompt_en_v1, module) + "\n"
             # result = self._generate(prompt_merge, test_case_result)
             with self.session_factory() as session:
                 test_case = session.query(TestCase).filter_by(file_id=file_id).first()
