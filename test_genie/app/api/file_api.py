@@ -28,7 +28,7 @@ async def get_files(req: Request, user_id: int, file_service=Depends(get_file_se
     summary="upload file",
 )
 async def upload_file(req: Request, user_id: int, file: UploadFile, file_service=Depends(get_file_service)):
-    if not file.filename.endswith((".docx", ".md", ".pdf")):
+    if not file.filename.endswith((".docx", ".md")):
         raise BadRequestException("Only .docx and .md files are supported")
     if file.size > 1024 * 1024 * 10:
         raise BadRequestException("file size should be less than 10MB")

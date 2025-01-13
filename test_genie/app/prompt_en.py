@@ -102,7 +102,7 @@ prompt_en_v1 = """
 * Result: Initially marked as "To be tested"
 #### 输出格式：CSV内容需以逗号分隔字段，字段间避免多余标点符号和不必要的内容，以免干扰结构。每个核心功能点的测试用例数量不少于30条，总体确保正常情况、异常情况及边界测试的覆盖。
 #### Example 输出：
-```
+```csv
 ID,Test Case,Module,Precondition,Steps,Expected Result,Result
 1,Retrieve client using valid email,Client Display,Client list contains multiple client records,1. Enter valid client email in the search bar; 2. Click the search button,System displays the corresponding client information,To be tested
 2,Retrieve client using valid name,Client Display,Client list contains multiple client records,1. Enter valid client name in the search bar; 2. Click the search button,System displays the corresponding client information,To be tested
